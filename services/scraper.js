@@ -1,21 +1,42 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 class ScraperService {
   async scrape(targetUrl) {
     let browser;
     try {
+      const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+      
+      let localPath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+      const commonPaths = [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Local\\Google\\Chrome\\Application\\chrome.exe'
+      ];
+
+      if (!isProd) {
+        const fs = require('fs');
+        for (const path of commonPaths) {
+          if (fs.existsSync(path)) {
+            localPath = path;
+            break;
+          }
+        }
+      }
+
       browser = await puppeteer.launch({
-        headless: 'new',
-        args: [
+        args: isProd ? chromium.args : [
           '--no-sandbox', 
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
           '--disable-gpu'
-        ]
+        ],
+        executablePath: isProd 
+          ? await chromium.executablePath() 
+          : localPath,
+        headless: isProd ? chromium.headless : 'new',
+        defaultViewport: chromium.defaultViewport,
       });
       const page = await browser.newPage();
       
